@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HabitFlow — Build Better Days</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161d27;
+      --surface2: #1c2535;
+      --border:   #243044;
+      --text:     #dce8f5;
+      --muted:    #6b82a0;
+      --accent:   #5b9bd5;
+      --accent-glow: rgba(91,155,213,0.18);
+      --good:     #4a9eca;
+      --bad:      #e07b6a;
+      --radius:   12px;
+      --shadow:   0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse at 20% 0%, rgba(30,60,100,0.45) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 100%, rgba(20,45,80,0.3) 0%, transparent 55%);
+      background-attachment: fixed;
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    header {
+      background: rgba(22, 29, 39, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.6rem;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+    .logo span {
+      color: var(--accent);
+      text-shadow: 0 0 18px rgba(91,155,213,0.5);
+    }
+    .date-badge {
+      font-size: 0.85rem;
+      color: var(--muted);
+      background: var(--surface2);
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    /* LAYOUT */
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 900px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 600px) { .grid-3 { grid-template-columns: 1fr; } }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    /* CARDS */
+/* CALENDAR & PROGRESS HEATMAP */
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .streak-badge {
+      background: rgba(224, 123, 106, 0.12);
+      color: #f0a294;
+      border: 1px solid rgba(224, 123, 106, 0.3);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 0 12px rgba(224, 123, 106, 0.15);
+    }
+
+    .calendar-title {
+      font-size: 1.05rem;
+      font-family: 'DM Serif Display', serif;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    /* Heatmap Colors */
+    .lvl-0   { background: var(--surface2); border-color: var(--border); color: var(--muted); }
+    .lvl-1   { background: rgba(74, 158, 202, 0.25); border-color: rgba(74, 158, 202, 0.4); color: var(--text); }
+    .lvl-2   { background: rgba(74, 158, 202, 0.6); border-color: rgba(74, 158, 202, 0.8); color: #fff; }
+    .lvl-3   { background: var(--good); border-color: #6bb9df; color: #fff; box-shadow: 0 0 10px rgba(74,158,202,0.4); }
+
+    /* Weekly View */
+    .weekly-row {
+      display: flex;
+      justify-content: space-between; /* Spreads out evenly in the column */
+      gap: 6px;
+      width: 100%; /* Fills the card width */
+      margin: 0 auto 24px auto;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+    
+    .day-bubble {
+      flex: 1;
+      max-width: 45px; /* Slightly smaller to fit 7 days in half-width */
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid;
+      transition: transform 0.2s;
+      cursor: default;
+    }
+    .day-bubble:hover { transform: translateY(-2px); }
+    .day-bubble.today { border: 2px solid var(--accent); box-shadow: 0 0 0 2px rgba(91,155,213,0.2); }
+    
+    .day-name { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; opacity: 0.8; }
+    .day-date { font-weight: 600; font-size: 0.95rem; }
+
+    /* Monthly View */
+    .month-container {
+      background: var(--surface2);
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      width: 100%; /* Fills the card width */
+      box-sizing: border-box;
+    }
+    .month-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .month-nav {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.75rem;
+    }
+    .month-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+    .month-day-label {
+      text-align: center;
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    .month-cell {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      border: 1px solid;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .month-cell:hover:not(.empty) {
+      border-color: var(--accent);
+      transform: scale(1.1);
+    }
+    .month-cell.empty {
+      background: transparent;
+      border: none;
+      pointer-events: none;
+    }
+
+    /* Legend */
+    .heatmap-legend {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      margin-top: 16px;
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+    .legend-box {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1px solid;
+    }
+
+    /* STATS */
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0.6;
+    }
+    .stat-label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .stat-value { font-family: 'DM Serif Display', serif; font-size: 2.2rem; color: var(--text); }
+    .stat-sub { font-size: 0.82rem; color: var(--muted); }
+
+    /* SECTION HEADING */
+    .section-heading {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.35rem;
+      margin: 36px 0 16px;
+      color: var(--text);
+    }
+
+    /* HABIT LIST */
+    .habit-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .habit-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+      cursor: pointer;
+      user-select: none;
+    }
+    .habit-item:hover {
+      background: #223044;
+      border-color: #3a5070;
+      box-shadow: 0 0 12px rgba(91,155,213,0.08);
+    }
+    .habit-item.done {
+      background: rgba(74, 158, 202, 0.1);
+      border-color: rgba(74, 158, 202, 0.35);
+    }
+    .habit-item.done .habit-name { text-decoration: line-through; color: var(--muted); }
+
+    .check-box {
+      width: 22px; height: 22px;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.85rem;
+      color: transparent;
+      transition: all 0.2s;
+    }
+    .habit-item.done .check-box {
+      background: var(--good);
+      border-color: var(--good);
+      color: #fff;
+      box-shadow: 0 0 10px rgba(74,158,202,0.4);
+    }
+
+    .habit-name { flex: 1; font-size: 0.95rem; font-weight: 500; color: var(--text); }
+    .habit-streak {
+      font-size: 0.78rem;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 3px 9px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .habit-item.done .habit-streak {
+      background: rgba(74,158,202,0.15);
+      border-color: rgba(74,158,202,0.3);
+      color: var(--accent);
+    }
+
+    /* BAD HABITS */
+    .bad-habit-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .bad-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .bad-info { flex: 1; }
+    .bad-name { font-size: 0.95rem; font-weight: 500; color: var(--text); }
+    .bad-tip { font-size: 0.8rem; color: var(--muted); margin-top: 3px; }
+    .bad-days {
+      font-size: 0.78rem;
+      background: rgba(224,123,106,0.12);
+      color: #e8a090;
+      border: 1px solid rgba(224,123,106,0.3);
+      padding: 3px 9px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    /* SUGGESTIONS */
+    .suggestion-item {
+      padding: 14px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .sug-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 1px; }
+    .sug-body { flex: 1; }
+    .sug-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 3px; color: var(--text); }
+    .sug-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+    .sug-tag {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-top: 8px;
+      font-weight: 600;
+    }
+    .tag-health    { background: rgba(74,158,202,0.15); color: #7ec8e8; border: 1px solid rgba(74,158,202,0.25); }
+    .tag-focus     { background: rgba(120,100,220,0.15); color: #b0a0f0; border: 1px solid rgba(120,100,220,0.25); }
+    .tag-wellbeing { background: rgba(180,150,80,0.15); color: #d4b870; border: 1px solid rgba(180,150,80,0.25); }
+    .tag-social    { background: rgba(180,100,160,0.15); color: #d090c0; border: 1px solid rgba(180,100,160,0.25); }
+
+    .add-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 10px;
+      padding: 6px 14px;
+      background: rgba(91,155,213,0.2);
+      color: var(--accent);
+      border: 1px solid rgba(91,155,213,0.35);
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+    .add-btn:hover {
+      background: rgba(91,155,213,0.3);
+      box-shadow: 0 0 10px rgba(91,155,213,0.2);
+    }
+
+    /* FORM */
+    .form-row { display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+    .form-input {
+      flex: 1;
+      min-width: 140px;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-input::placeholder { color: var(--muted); }
+    .form-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(91,155,213,0.12);
+    }
+    .form-select {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem;
+      background: var(--bg);
+      color: var(--text);
+      cursor: pointer;
+      outline: none;
+    }
+    .submit-btn {
+      padding: 10px 20px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: box-shadow 0.15s, opacity 0.15s;
+      white-space: nowrap;
+    }
+    .submit-btn:hover {
+      opacity: 0.9;
+      box-shadow: 0 0 16px rgba(91,155,213,0.35);
+    }
+    .submit-btn.danger {
+      background: var(--bad);
+    }
+    .submit-btn.danger:hover {
+      box-shadow: 0 0 16px rgba(224,123,106,0.35);
+    }
+
+    /* PROGRESS BAR */
+    .progress-wrap { margin-top: 16px; }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .progress-bar {
+      height: 8px;
+      background: var(--surface2);
+      border-radius: 99px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3a7abf, #7ec2f0);
+      border-radius: 99px;
+      transition: width 0.4s ease;
+      box-shadow: 0 0 8px rgba(91,155,213,0.5);
+    }
+
+    /* QUOTE */
+    .quote-block {
+      background: linear-gradient(135deg, #162038 0%, #1c2d4a 100%);
+      border: 1px solid #2a4060;
+      color: var(--text);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-top: 32px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(91,155,213,0.15);
+    }
+    .quote-block::before {
+      content: '"';
+      font-family: 'DM Serif Display', serif;
+      font-size: 8rem;
+      color: rgba(91,155,213,0.12);
+      position: absolute;
+      top: -20px; left: 12px;
+      line-height: 1;
+      pointer-events: none;
+    }
+    .quote-text {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.15rem;
+      font-style: italic;
+      line-height: 1.55;
+      position: relative;
+      color: #c8dff5;
+    }
+    .quote-author {
+      margin-top: 10px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      position: relative;
+    }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 28px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      margin-top: 48px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Habit<span>Flow</span></div>
+  <div class="date-badge" id="date-badge"></div>
+</header>
+
+<div class="container">
+
+  <!-- STATS ROW -->
+  <div class="grid-3" style="margin-top: 8px;">
+    <div class="stat-card">
+      <div class="stat-label">Today's Progress</div>
+      <div class="stat-value" id="stat-done">0 / 0</div>
+      <div class="stat-sub">habits completed</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Longest Streak</div>
+      <div class="stat-value">14 🔥</div>
+      <div class="stat-sub">days — Morning Walk</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Bad Habits Avoided</div>
+      <div class="stat-value">3</div>
+      <div class="stat-sub">this week</div>
+    </div>
+  </div>
+
+  <!-- TODAY'S HABITS -->
+  <div class="section-heading">✅ Today's Habits</div>
+  <div class="card">
+    <div class="habit-list" id="habit-list"></div>
+
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span>Daily completion</span>
+        <span id="prog-pct">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="prog-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div style="margin-top: 20px;">
+      <div class="card-title" style="margin-bottom:10px;">➕ Add a new habit</div>
+      <div class="form-row">
+        <input class="form-input" id="habit-input" type="text" placeholder="e.g. Drink 8 glasses of water" />
+        <select class="form-select" id="habit-freq">
+          <option>Daily</option>
+          <option>Weekly</option>
+          <option>Weekdays</option>
+        </select>
+        <button class="submit-btn" onclick="addHabit()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BAD HABITS + SUGGESTIONS -->
+  <div class="grid-2" style="margin-top:32px;">
+
+    <div>
+      <div class="section-heading">🚫 Breaking Bad Habits</div>
+      <div class="card">
+        <div id="bad-habit-list" class="habit-list"></div>
+        <div style="margin-top: 20px;">
+          <div class="card-title" style="margin-bottom:10px;">➕ Track a habit to quit</div>
+          <div class="form-row">
+            <input class="form-input" id="bad-input" type="text" placeholder="e.g. Scrolling before bed" />
+            <button class="submit-btn danger" onclick="addBadHabit()">Track</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-heading">🗓️ Your Progress</div>
+      <div class="card" style="margin-bottom: 32px;">
+        
+        <div class="calendar-header">
+          <div>
+            <div class="calendar-title">Weekly Snapshot</div>
+            <div style="font-size: 0.85rem; color: var(--muted);">Track your daily completion rate</div>
+          </div>
+          <div class="streak-badge">
+            🔥 14 Day Active Streak!
+          </div>
+        </div>
+
+        <div class="weekly-row">
+          <div class="day-bubble lvl-3"><div class="day-name">Mon</div><div class="day-date">20</div></div>
+          <div class="day-bubble lvl-2"><div class="day-name">Tue</div><div class="day-date">21</div></div>
+          <div class="day-bubble lvl-3"><div class="day-name">Wed</div><div class="day-date">22</div></div>
+          <div class="day-bubble lvl-1"><div class="day-name">Thu</div><div class="day-date">23</div></div>
+          <div class="day-bubble lvl-3"><div class="day-name">Fri</div><div class="day-date">24</div></div>
+          <div class="day-bubble lvl-0 today"><div class="day-name">Sat</div><div class="day-date">25</div></div>
+          <div class="day-bubble lvl-0"><div class="day-name">Sun</div><div class="day-date">26</div></div>
+        </div>
+
+        <div class="month-container">
+          <div class="month-header">
+            <button class="month-nav">❮</button>
+            <span>April 2026</span>
+            <button class="month-nav">❯</button>
+          </div>
+          
+          <div class="month-grid">
+            <div class="month-day-label">Su</div>
+            <div class="month-day-label">Mo</div>
+            <div class="month-day-label">Tu</div>
+            <div class="month-day-label">We</div>
+            <div class="month-day-label">Th</div>
+            <div class="month-day-label">Fr</div>
+            <div class="month-day-label">Sa</div>
+
+            <div class="month-cell empty"></div>
+            <div class="month-cell empty"></div>
+            <div class="month-cell empty"></div>
+            
+            <div class="month-cell lvl-1">1</div>
+            <div class="month-cell lvl-2">2</div>
+            <div class="month-cell lvl-3">3</div>
+            <div class="month-cell lvl-3">4</div>
+            <div class="month-cell lvl-0">5</div>
+            <div class="month-cell lvl-1">6</div>
+            <div class="month-cell lvl-2">7</div>
+            <div class="month-cell lvl-3">8</div>
+            <div class="month-cell lvl-3">9</div>
+            <div class="month-cell lvl-3">10</div>
+            <div class="month-cell lvl-2">11</div>
+            <div class="month-cell lvl-0">12</div>
+            <div class="month-cell lvl-1">13</div>
+            <div class="month-cell lvl-2">14</div>
+            <div class="month-cell lvl-3">15</div>
+            <div class="month-cell lvl-3">16</div>
+            <div class="month-cell lvl-3">17</div>
+            <div class="month-cell lvl-2">18</div>
+            <div class="month-cell lvl-1">19</div>
+            <div class="month-cell lvl-3">20</div>
+            <div class="month-cell lvl-2">21</div>
+            <div class="month-cell lvl-3">22</div>
+            <div class="month-cell lvl-1">23</div>
+            <div class="month-cell lvl-3">24</div>
+            <div class="month-cell lvl-0 today">25</div>
+            <div class="month-cell lvl-0">26</div>
+            <div class="month-cell lvl-0">27</div>
+            <div class="month-cell lvl-0">28</div>
+            <div class="month-cell lvl-0">29</div>
+            <div class="month-cell lvl-0">30</div>
+          </div>
+
+          <div class="heatmap-legend">
+            <span>Less</span>
+            <div class="legend-box lvl-0"></div>
+            <div class="legend-box lvl-1"></div>
+            <div class="legend-box lvl-2"></div>
+            <div class="legend-box lvl-3"></div>
+            <span>More</span>
+          </div>
+        </div>
+
+      </div>
+    </div> 
+    <div>
+      <div>
+      <div class="section-heading">💡 Suggested Habits</div>
+      <div class="card">
+        <div style="display:flex;flex-direction:column;gap:10px;" id="suggestions-list"></div>
+      </div>
+
+      <div class="quote-block" style="margin-top: 32px;">
+        <div class="quote-text" id="quote-text"></div>
+        <div class="quote-author" id="quote-author"></div>
+      </div>
+      
+    </div> </div> </div> <footer>HabitFlow &mdash; Track, improve, and grow every day.</footer>
+
+<script>
+  // DATE
+  const now = new Date();
+  document.getElementById('date-badge').textContent =
+    now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+
+  // GOOD HABITS
+  let habits = [
+    { name: 'Morning Walk (20 min)', streak: '12 days', done: false },
+    { name: 'Read for 15 minutes', streak: '7 days', done: false },
+    { name: 'Drink 8 glasses of water', streak: '5 days', done: false },
+    { name: 'No phone 1hr before bed', streak: '3 days', done: false },
+    { name: 'Meditate (10 min)', streak: '9 days', done: false },
+  ];
+
+  function renderHabits() {
+    document.getElementById('habit-list').innerHTML = habits.map((h, i) => `
+      <div class="habit-item ${h.done ? 'done' : ''}" onclick="toggleHabit(${i})">
+        <div class="check-box">${h.done ? '✓' : ''}</div>
+        <div class="habit-name">${h.name}</div>
+        <div class="habit-streak">🔥 ${h.streak}</div>
+      </div>
+    `).join('');
+    updateProgress();
+  }
+
+  function toggleHabit(i) {
+    habits[i].done = !habits[i].done;
+    renderHabits();
+  }
+
+  function addHabit() {
+    const input = document.getElementById('habit-input');
+    const val = input.value.trim();
+    if (!val) return;
+    habits.push({ name: val, streak: '0 days', done: false });
+    input.value = '';
+    renderHabits();
+  }
+
+  function updateProgress() {
+    const done = habits.filter(h => h.done).length;
+    const total = habits.length;
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    document.getElementById('stat-done').textContent = `${done} / ${total}`;
+    document.getElementById('prog-pct').textContent = `${pct}%`;
+    document.getElementById('prog-fill').style.width = pct + '%';
+  }
+
+  // BAD HABITS
+  let badHabits = [
+    { name: 'Snacking late at night', tip: 'Try herbal tea instead — it signals your body to wind down.', days: '4 days clean' },
+    { name: 'Checking phone on waking', tip: 'Replace with 2 minutes of stretching before reaching for your phone.', days: '2 days clean' },
+  ];
+
+  function renderBadHabits() {
+    document.getElementById('bad-habit-list').innerHTML = badHabits.map(b => `
+      <div class="bad-habit-item">
+        <div class="bad-icon">⚠️</div>
+        <div class="bad-info">
+          <div class="bad-name">${b.name}</div>
+          <div class="bad-tip">💬 ${b.tip}</div>
+        </div>
+        <div class="bad-days">${b.days}</div>
+      </div>
+    `).join('');
+  }
+
+  function addBadHabit() {
+    const input = document.getElementById('bad-input');
+    const val = input.value.trim();
+    if (!val) return;
+    badHabits.push({ name: val, tip: 'Notice your triggers and replace this with a healthier alternative.', days: '0 days clean' });
+    input.value = '';
+    renderBadHabits();
+  }
+
+  // SUGGESTIONS
+  const suggestions = [
+    { icon:'🌿', title:'5-Minute Journaling', desc:'Write 3 things you\'re grateful for each morning. Builds a positive mindset over time.', tag:'wellbeing', tagClass:'tag-wellbeing' },
+    { icon:'🏃', title:'10-Minute Evening Stretch', desc:'Reduces tension from sitting and helps improve sleep quality significantly.', tag:'health', tagClass:'tag-health' },
+    { icon:'📵', title:'Phone-Free Meals', desc:'Put your phone away during meals. Promotes mindful eating and better digestion.', tag:'focus', tagClass:'tag-focus' },
+    { icon:'🤝', title:'Weekly Friend Check-In', desc:'Send one message per week to reconnect with someone you haven\'t spoken to in a while.', tag:'social', tagClass:'tag-social' },
+    { icon:'💧', title:'Morning Glass of Water', desc:'Drink a full glass of water before coffee. Rehydrates your body after sleep.', tag:'health', tagClass:'tag-health' },
+  ];
+
+  function renderSuggestions() {
+    document.getElementById('suggestions-list').innerHTML = suggestions.map((s, i) => `
+      <div class="suggestion-item">
+        <div class="sug-icon">${s.icon}</div>
+        <div class="sug-body">
+          <div class="sug-title">${s.title}</div>
+          <div class="sug-desc">${s.desc}</div>
+          <span class="sug-tag ${s.tagClass}">${s.tag}</span><br/>
+          <button class="add-btn" onclick="addFromSuggestion(${i})">+ Add to my habits</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function addFromSuggestion(i) {
+    habits.push({ name: suggestions[i].title, streak: '0 days', done: false });
+    renderHabits();
+    alert('"' + suggestions[i].title + '" added to your habits!');
+  }
+
+  // QUOTES
+  const quotes = [
+    { text: 'We are what we repeatedly do. Excellence, then, is not an act, but a habit.', author: 'Aristotle' },
+    { text: 'Motivation is what gets you started. Habit is what keeps you going.', author: 'Jim Ryun' },
+    { text: 'First forget inspiration. Habit is more dependable.', author: 'Octavia Butler' },
+    { text: 'You\'ll never change your life until you change something you do daily.', author: 'John C. Maxwell' },
+    { text: 'Small habits make a big difference.', author: 'James Clear' },
+  ];
+  const q = quotes[Math.floor(Math.random() * quotes.length)];
+  document.getElementById('quote-text').textContent = q.text;
+  document.getElementById('quote-author').textContent = '— ' + q.author;
+
+  // INIT
+  renderHabits();
+  renderBadHabits();
+  renderSuggestions();
+</script>
+
+</body>
+</html>
